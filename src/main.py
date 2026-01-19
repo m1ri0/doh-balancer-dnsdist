@@ -1,51 +1,49 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException
 import dns.message
 import dns.rdatatype
 import httpx
 
-app = Flask(__name__) # TROCAR PARA FAST API ASSINCRONO
+# Using fast api to make async requests and make app more simple
+app = FastAPI(tittle="DoH-loadBalancer")
 
 # Config
 DNSDIST_URL = "https://dnsdist/dns-query"
 
-@app.route('/resolve', methods=['GET'])
-def resolve_dns():
-    # Receiving URL/Domain from GET parameter
-    domain = request.args.get('url')
-    rd = request.args.get('record')
+@app.get("/resolve")
+async def resolve_dns(url: str, type: str = "A"):
 
-    if not domain:
-        return jsonify({"erro": "Parametro 'url' obrigatório"}), 400
+    # Solving a domain using backend DNSDist by DoH
+    if not url:
+        raise HTTPException(status_code=400, detail="Parametro 'url' obrigatorio")
+    
+    try:
+        rdtype = dns.rdatatype.from_text(type)
+    except (dns.rdatatype.UnknownRdatatype, ValueError):
+        raise HTTPException(status_code=400, detail=f"Tipo de registro inválido : {type}")
 
     try:
-        # translate
-        # Creating DNS question (Type A = IPv4)
-        q = dns.message.make_query(domain, dns.rdatatype.from_text(rd))
-        # print(q) # debug only
+        # Getting query
+        q = dns.message.make_query(url, rdtype)
         wire_data = q.to_wire()
-        # print(wire_data) # debug only
-    
-        # Sending binary to dnsdist
-        with httpx.Client(verify=False, http2=True) as client:
-            response = client.post(
+
+        # Sending to dnsdist async
+        async with httpx.AsyncClient(verify=False, http2=True) as client:
+            response = await client.post(
                 DNSDIST_URL,
-                headers={
-                    "Content-Type": "application/dns-message",
-                    "Accept": "application/dns-message"
-                },
+                headers={"ContentType": "application/dns-message"},
                 content=wire_data,
                 timeout=5.0
             )
-        if response.status_code != 200:
-            return jsonify({"erro_dnsdist": response.status_code, "msg": response.text}), 502
         
-        # Decoding (Binary -> JSON)
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Erro DNSDist: {response.text}")
+        
+        # Decoding answer
         dns_response = dns.message.from_wire(response.content)
 
         full_answers = []
         for rrset in dns_response.answer:
             rtype = dns.rdatatype.to_text(rrset.rdtype)
-
             for rr in rrset:
                 full_answers.append({
                     "name": str(rrset.name),
@@ -53,15 +51,15 @@ def resolve_dns():
                     "ttl": rrset.ttl,
                     "data": str(rr)
                 })
-
-        return jsonify({
+        
+        # Direct return
+        return {
             "Status": dns.rcode.to_text(dns_response.rcode()),
-            "Question": [{"name": domain, "type": rd}],
+            "Question": [{"name": url, "type": type.upper()}],
             "Answer": full_answers
-        })
+        }
     
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Erro de conexão com DNSDist: {str(e)}")
     except Exception as e:
-        return jsonify({"erro_interno": str(e)}), 500
-    
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8000)
+        raise HTTPException(status_code=500, detail=str(e))

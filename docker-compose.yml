@@ -29,4 +29,4 @@ services:
     depends_on:
       - dnsdist
 
-    command: python3 /main.py
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload 
