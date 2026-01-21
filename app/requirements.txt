@@ -1,0 +1,3 @@
+dnspython
+httpx[http2]
+fastapi[standard]

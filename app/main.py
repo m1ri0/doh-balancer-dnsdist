@@ -14,7 +14,7 @@ async def resolve_dns(url: str, type: str = "A"):
 
     # Solving a domain using backend DNSDist by DoH
     if not url:
-        raise HTTPException(status_code=400, detail="Parametro 'url' obrigatorio")
+        raise HTTPException(status_code=400, detail="Parametro 'url' obrigatório!")
     
     try:
         rdtype = dns.rdatatype.from_text(type)
@@ -27,7 +27,7 @@ async def resolve_dns(url: str, type: str = "A"):
         wire_data = q.to_wire()
 
         # Sending to dnsdist async
-        async with httpx.AsyncClient(verify=False, http2=True) as client:
+        async with httpx.AsyncClient(verify=False, http2=True) as client: # change verify=false to true for production
             response = await client.post(
                 DNSDIST_URL,
                 headers={"ContentType": "application/dns-message"},
@@ -36,7 +36,7 @@ async def resolve_dns(url: str, type: str = "A"):
             )
         
         if response.status_code != 200:
-            raise HTTPException(status_code=502, detail=f"Erro DNSDist: {response.text}")
+            raise HTTPException(status_code=502, detail=f"Erro no DNSDist: {response.text}")
         
         # Decoding answer
         dns_response = dns.message.from_wire(response.content)

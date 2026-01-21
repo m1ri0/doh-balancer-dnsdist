@@ -19,7 +19,7 @@ services:
       - TZ=America/Sao_Paulo
 
   api:
-    build: ./src
+    build: ./app
     container_name: python_doh
     restart: always
 
@@ -29,4 +29,22 @@ services:
     depends_on:
       - dnsdist
 
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload 
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/resolve?url=google.com"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # requester:
+  #   build: ./doh-requester
+  #   container_name: requester_doh
+  #   restart: always
+
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+
+  #   command: python3 /main.py
