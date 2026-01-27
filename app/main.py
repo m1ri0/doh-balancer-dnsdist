@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 import dns.message
 import dns.rdatatype
 import httpx
@@ -10,15 +11,11 @@ app = FastAPI(tittle="DoH-loadBalancer")
 DNSDIST_URL = "https://dnsdist/dns-query"
 client: httpx.AsyncClient | None = None
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global client
-    client = httpx.AsyncClient(verify=False, http2=True, timeout=5.0)  # change verify=False to True for production
-    
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global client
+    client = httpx.AsyncClient(verify=False, http2=True, timeout=5.0) # change verify=False to True for production
+    yield
     await client.aclose()
 
 @app.get("/resolve")
