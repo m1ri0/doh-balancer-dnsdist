@@ -4,9 +4,6 @@ import dns.message
 import dns.rdatatype
 import httpx
 
-# Using fast api to make async requests and make app more simple
-app = FastAPI(tittle="DoH-loadBalancer")
-
 # Config
 DNSDIST_URL = "https://dnsdist/dns-query"
 client: httpx.AsyncClient | None = None
@@ -17,6 +14,9 @@ async def lifespan(app: FastAPI):
     client = httpx.AsyncClient(verify=False, http2=True, timeout=5.0) # change verify=False to True for production
     yield
     await client.aclose()
+
+# Using fast api to make async requests and make app more simple
+app = FastAPI(tittle="DoH-loadBalancer", lifespan=lifespan)
 
 @app.get("/resolve")
 async def resolve_dns(url: str, type: str = "A"):
