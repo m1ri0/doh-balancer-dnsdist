@@ -210,3 +210,6 @@ __marimo__/
 # Keys
 server.crt
 server.key
+
+# Logs
+*.csv

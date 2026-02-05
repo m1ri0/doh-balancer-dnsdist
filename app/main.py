@@ -11,8 +11,8 @@ client: httpx.AsyncClient | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global client
-    limits = httpx.Limits(max_keepalive_connections=100, max_connections=None, keepalive_expiry=30.0)
-    client = httpx.AsyncClient(verify=False, http2=True, limits=limits, timeout=httpx.Timeout(2.0, connect=0.5)) # change verify=False to True for production
+    limits = httpx.Limits(max_keepalive_connections=200, max_connections=200, keepalive_expiry=30.0)
+    client = httpx.AsyncClient(verify=False, http2=True, limits=limits, timeout=httpx.Timeout(3.0, connect=1.0)) # change verify=False to True for production
     yield
     await client.aclose()
 

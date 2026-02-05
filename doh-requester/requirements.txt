@@ -1,4 +1,4 @@
 requests
-fastapi[standard]
 tqdm
 pandas
+httpx[http2]
