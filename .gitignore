@@ -213,3 +213,7 @@ server.key
 
 # Logs
 *.csv
+
+# Certs
+server.crt
+server.key
